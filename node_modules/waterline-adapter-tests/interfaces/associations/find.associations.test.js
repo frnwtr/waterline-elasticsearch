@@ -27,8 +27,8 @@ describe('Association Interface', function() {
         payments = [];
         var i = 0;
 
-        for(i=0; i<2; i++) payments.push({ amount: i, customer: customers[0].id });
-        for(i=0; i<2; i++) payments.push({ amount: i, customer: customers[1].id });
+        for(i=0; i<2; i++) payments.push({ amount: i, a_customer: customers[0].id });
+        for(i=0; i<2; i++) payments.push({ amount: i, a_customer: customers[1].id });
 
         Associations.Payment.createEach(payments, function(err) {
           if(err) return done(err);
@@ -56,13 +56,13 @@ describe('Association Interface', function() {
       .exec(function(err, customers) {
         assert(!err);
         assert(Array.isArray(customers));
-        assert(customers.length === 2);
+        assert.strictEqual(customers.length, 2);
 
         assert(Array.isArray(customers[0].payments));
         assert(Array.isArray(customers[1].payments));
 
-        assert(customers[0].payments.length === 2, 'Expected 2 payments, but got customers[0] ==> ' +require('util').inspect(customers[0], false, null));
-        assert(customers[1].payments.length === 2);
+        assert.strictEqual(customers[0].payments.length, 2, 'Expected 2 payments, but got customers[0] ==> ' +require('util').inspect(customers[0], false, null));
+        assert.strictEqual(customers[1].payments.length, 2);
 
         assert.equal(customers[0].payments[0].amount, 0);
         assert.equal(customers[0].payments[1].amount, 1, 'Expected amount of second associated payment to === 1, but instead here is the customer:'+util.inspect(customers[0], false, null));

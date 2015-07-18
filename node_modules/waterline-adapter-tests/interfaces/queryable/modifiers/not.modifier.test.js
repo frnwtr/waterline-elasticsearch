@@ -32,12 +32,12 @@ describe('Queryable Interface', function() {
 
       it('should return records with string usage', function(done) {
         Queryable.User.find({ first_name: testName, age: { not: 40 }})
-        .sort('id asc')
+        .sort('age asc')
         .exec(function(err, users) {
           assert(!err);
           assert(Array.isArray(users));
-          assert(users.length === 3);
-          assert(users[0].age === 41);
+          assert.strictEqual(users.length, 3);
+          assert.strictEqual(users[0].age, 41);
 
           // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           // TODO: check that models without the attribute in question set AT ALL,
@@ -50,26 +50,27 @@ describe('Queryable Interface', function() {
 
       it('should return records with symbolic usage ! usage', function(done) {
         Queryable.User.find({ first_name: testName, age: { '!': 40 }})
-        .sort('id asc')
+        .sort('age asc')
         .exec(function(err, users) {
           assert(!err);
           assert(Array.isArray(users));
-          assert(users.length === 3);
-          assert(users[0].age === 41);
+          assert.strictEqual(users.length, 3);
+          assert.strictEqual(users[0].age, 41);
           done();
         });
       });
 
       it('should return records using not comparisons on strings', function(done) {
+          
         Queryable.User.find({ first_name: testName, email: { '!': '41@test.com' }})
-        .sort('id asc')
+        .sort('age asc')
         .exec(function(err, users) {
           assert(!err);
 
           assert(Array.isArray(users));
-          assert(users.length === 3);
-          assert(users[0].age === 40);
-          assert(users[1].age === 42);
+          assert.strictEqual(users.length, 3);
+          assert.strictEqual(users[0].age, 40);
+          assert.strictEqual(users[1].age, 42);
           done();
         });
       });

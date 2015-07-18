@@ -9,7 +9,8 @@ var assert = require('assert');
 
 // Require Fixtures
 var fixtures = {
-  UserFixture: require('./fixtures/crud.fixture')
+  UserFixture: require('./fixtures/crud.fixture'),
+  ThingFixture: require('./fixtures/validations.fixture')
 };
 
 
@@ -28,8 +29,10 @@ before(function(done) {
   });
 
   var connections = { semantic: _.clone(Connections.test) };
+  
+  var defaults = { migrate: 'alter' };
 
-  waterline.initialize({ adapters: { wl_tests: Adapter }, connections: connections }, function(err, _ontology) {
+  waterline.initialize({ adapters: { wl_tests: Adapter }, connections: connections, defaults: defaults }, function(err, _ontology) {
     if(err) return done(err);
 
     ontology = _ontology;

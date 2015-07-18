@@ -1,4 +1,5 @@
 var assert = require('assert'),
+    Promise = require('bluebird'),
     _ = require('lodash');
 
 describe('Association Interface', function() {
@@ -48,9 +49,9 @@ describe('Association Interface', function() {
               .populate('taxis')
               .exec(function(err, model) {
                 assert(!err);
-                assert(model.name === 'm:m update nested - updated');
-                assert(model.taxis.length === 1);
-                assert(model.taxis[0].medallion === 1);
+                assert.equal(model.name, 'm:m update nested - updated');
+                assert.strictEqual(model.taxis.length, 1);
+                assert.strictEqual(model.taxis[0].medallion, 1);
                 done();
               });
 
@@ -106,14 +107,14 @@ describe('Association Interface', function() {
 
               // Look up the driver again to be sure the taxis were added
               Associations.Driver.findOne(values[0].id)
-              .populate('taxis')
+              .populate('taxis',{sort : {medallion : 1}})
               .exec(function(err, model) {
-                assert(!err);
-                assert(model.name === 'm:m update nested - updated');
-                assert(model.taxis.length === 3);
-                assert(model.taxis[0].medallion === 3);
-                assert(model.taxis[1].medallion === 4);
-                assert(model.taxis[2].medallion === 5);
+                assert(!err, 'Error: ' + err);
+                assert.equal(model.name, 'm:m update nested - updated');
+                assert.strictEqual(model.taxis.length, 3);
+                assert.strictEqual(model.taxis[0].medallion, 3);
+                assert.strictEqual(model.taxis[1].medallion, 4);
+                assert.strictEqual(model.taxis[2].medallion, 5);
                 done();
               });
 
@@ -173,23 +174,178 @@ describe('Association Interface', function() {
 
               // Look up the driver again to be sure the taxis were added
               Associations.Driver.findOne(values[0].id)
-              .populate('taxis')
+              .populate('taxis',{sort : {medallion : 1}})
               .exec(function(err, model) {
                 assert(!err);
-                assert(model.name === 'm:m update nested - updated');
-                assert(model.taxis.length === 2);
+                assert.equal(model.name, 'm:m update nested - updated');
+                assert.strictEqual(model.taxis.length, 2);
 
                 // Ensure association values were updated
-                assert(model.taxis[0].medallion === 1);
-                assert(model.taxis[1].medallion === 2);
+                assert.strictEqual(model.taxis[0].medallion, 1);
+                assert.strictEqual(model.taxis[1].medallion, 2);
 
                 done();
               });
 
             });
           });
+          
+        });
+        
+        
+        describe('when associations already exist', function() {
+
+          /////////////////////////////////////////////////////
+          // TEST SETUP
+          ////////////////////////////////////////////////////
+
+          var Driver;
+
+          before(function(done) {
+
+            var data = {
+              name: 'm:m update nested save',
+              taxis: [ { medallion: 1000 } ]
+            };
+
+            Associations.Driver.create(data).exec(function(err, driver) {
+              if(err) return done(err);
+              Driver = driver;
+              done();
+            });
+
+          });
+
+
+          /////////////////////////////////////////////////////
+          // TEST METHODS
+          ////////////////////////////////////////////////////
+
+          it('should update association values with save()', function(done) {
+            
+            Associations.Driver.findOne({ id: Driver.id })
+            .populate('taxis')
+            .exec(function(err, model) {
+              var taxi = model.taxis[0];
+              taxi.medallion = 1001;
+              taxi.save(function(err){
+                assert(!err);
+                
+                Associations.Driver.findOne({ id: Driver.id })
+                .populate('taxis')
+                .exec(function(err, model) {
+                  assert(!err);
+                  assert.strictEqual(model.taxis.length, 1);
+                  assert.strictEqual(model.taxis[0].medallion, 1001);
+                  done();
+                });
+              });
+              
+            });
+          });
         });
 
+        
+        describe('when associations are sync\'ed rapidly', function() {
+
+          /////////////////////////////////////////////////////
+          // TEST SETUP
+          ////////////////////////////////////////////////////
+
+          var Drivers;
+          var Taxis;
+
+          before(function(done) {
+
+            var driversData = [
+              {name: "Rapid 0"},
+              {name: "Rapid 1"},
+              {name: "Rapid 2"},
+              {name: "Rapid 3"}
+            ];
+
+            var taxisData = [
+              {medallion: 200},
+              {medallion: 201},
+              {medallion: 202},
+              {medallion: 203}
+            ];
+            
+            Associations.Driver.createEach(driversData).exec(function(err, drivers) {
+              if(err) return done(err);
+              Drivers = drivers;
+              
+              Associations.Taxi.createEach(taxisData).exec(function(err, taxis) {
+                if(err) return done(err);
+                Taxis = taxis;
+                
+                done();
+              });
+              
+            });
+
+          });
+
+
+          /////////////////////////////////////////////////////
+          // TEST METHODS
+          ////////////////////////////////////////////////////
+
+          it('should create the correct associations', function(done) {
+            
+            // Construct promises
+            var associationMap = {};
+            var associationPromises = [];
+            
+            var driverId, taxiId;
+            for (var i = 0, il = Drivers.length; i < il; ++i) {
+              
+              driverId = _.findWhere(Drivers, {name: "Rapid " + i}).id;
+              taxiId   = _.findWhere(Taxis,   {medallion: 200 + i}).id;
+              
+              // Set map for testing later.  Maps driver to taxi being associated.
+              associationMap[driverId] = taxiId;
+              
+              associationPromises.push(
+                Associations.Driver.update(driverId, {taxis: [{id: taxiId}]})
+              );
+            }
+            
+            // Perform all updates at once
+            Promise.all(associationPromises)
+            .then(function(results){
+            
+              // Check to see if associations were created as expected
+              Associations.Driver.find({id: _.map(Drivers, 'id')})
+              .populate('taxis')
+              .exec(function(err, drivers) {
+                
+                if (err) return done(err);
+                
+                assert.equal(drivers.length, Drivers.length);
+                
+                // Ensure the correct operations happened per record using associationMap
+                var driver;
+                for (var i = 0, il = drivers.length; i < il; ++i) {
+                  
+                  driver = drivers[i];
+                  
+                  assert(typeof driver === "object" && driver !== null);
+                  assert(Array.isArray(driver.taxis));
+                  assert.equal(driver.taxis.length, 1);
+                  assert.equal(driver.taxis[0].id, associationMap[driver.id]);
+                }
+                
+                done();
+                
+              });
+              
+            })
+            .catch(done);
+            
+          });
+        });
+        
       });
     });
   });

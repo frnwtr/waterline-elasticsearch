@@ -19,7 +19,7 @@ describe('Association Interface', function() {
             if(err) return done(err);
 
             customer = model;
-            Associations.Payment.create({ amount: 1, customer: customer.id }, done);
+            Associations.Payment.create({ amount: 1, a_customer: customer.id }, done);
           });
         });
 
@@ -38,8 +38,8 @@ describe('Association Interface', function() {
             .exec(function(err, model) {
               assert(!err);
 
-              assert(model.payments.length === 2);
-              assert(model.payments[1].amount === 1337);
+              assert.strictEqual(model.payments.length, 2);
+              assert.strictEqual(model.payments[1].amount, 1337);
               done();
             });
           });
@@ -65,7 +65,7 @@ describe('Association Interface', function() {
             if(err) return done(err);
 
             customer = models[0];
-            Associations.Payment.create({ amount: 1, customer: models[1].id }, function(err, paymentModel) {
+            Associations.Payment.create({ amount: 1, a_customer: models[1].id }, function(err, paymentModel) {
               if(err) return done(err);
 
               payment = paymentModel;
@@ -89,8 +89,8 @@ describe('Association Interface', function() {
             .exec(function(err, data) {
               assert(!err);
 
-              assert(data.payments.length === 1);
-              assert(data.payments[0].amount === 1);
+              assert.strictEqual(data.payments.length, 1);
+              assert.strictEqual(data.payments[0].amount, 1);
               done();
             });
           });
